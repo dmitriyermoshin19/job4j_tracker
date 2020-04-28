@@ -1,4 +1,4 @@
-package ru.job4j.tracker.for_createProject;
+package ru.job4j.tracker.forcreateproject;
 
 public class Tracker {
     private final Item[] items = new Item[100];

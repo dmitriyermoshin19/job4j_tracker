@@ -1,66 +1,105 @@
 package ru.job4j.tracker;
 
-import org.junit.Before;
 import org.junit.Test;
 
+import java.io.InputStream;
+import java.sql.Connection;
+import java.util.Properties;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.List;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
 public class TrackerSQLTest {
-
-    private TrackerSQL trackerSQL;
     private List<Item> result;
 
-    @Before
-    public void setUp() {
-        trackerSQL = new TrackerSQL();
-        trackerSQL.init();
+    public Connection init() {
+        try (InputStream in = TrackerSQL.class.getClassLoader().getResourceAsStream("app.properties")) {
+            Properties config = new Properties();
+            config.load(in);
+            Class.forName(config.getProperty("driver-class-name"));
+            return DriverManager.getConnection(
+                    config.getProperty("url"),
+                    config.getProperty("username"),
+                    config.getProperty("password")
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test
-    public void checkConnection() {
-        assertThat(trackerSQL.init(), is(true));
+    public void createItem() throws SQLException {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            tracker.add(new Item("testNameFirst", "teatDescriptionFirst"));
+            assertThat(tracker.findByName("testNameFirst").size(), is(1));
+        }
     }
 
     @Test
-    public void whenAddItem() {
-        Item item = new Item("testNameFirst", "testDescriptionFirst");
-        trackerSQL.add(item);
-        assertThat(trackerSQL.findById(item.getId()).getName(), is("testNameFirst"));
+    public void whenAddItem() throws SQLException {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            tracker.add(second);
+            assertThat(tracker.findById(second.getId()).getName(), is("testNameSecond"));
+        }
     }
 
     @Test
-    public void whenReplaceNameOfItem() {
-        Item item = new Item("testNameSecond", "testDescriptionSecond");
-        Item item1 = new Item("testNameThird", "testDescriptionThird");
-        trackerSQL.add(item);
-        trackerSQL.replace(item.getId(), item1);
-        assertThat(trackerSQL.findById(item.getId()).getName(), is("testNameThird"));
+    public void whenReplaceNameOfItem() throws SQLException {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            Item third = new Item("testNameThird", "testDescriptionThird");
+            tracker.add(second);
+            tracker.replace(second.getId(), third);
+            assertThat(tracker.findById(second.getId()).getName(), is("testNameThird"));
+        }
     }
 
     @Test
-    public void whenFindAllItem() {
-        Item item = new Item("testNameFourth", "testDescriptionFourth");
-        Item item1 = new Item("testNameFifth", "testDescriptionFifth");
-        trackerSQL.add(item);
-        trackerSQL.add(item1);
-        result = trackerSQL.findAll();
-        int id = 4;
-        assertThat(result.get(id - 1).getDescription(), is("testDescriptionFifth"));
+    public void whenDeleteNameOfItem() throws SQLException {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            tracker.add(second);
+            tracker.delete(second.getId());
+            assertThat(tracker.findByName(second.getId()).size(), is(0));
+        }
     }
 
     @Test
-    public void whenFindItemsByName() {
-        result = trackerSQL.findByName("testNameFifth");
-        assertThat(result.get(0).getDescription(), is("testDescriptionFifth"));
+    public void whenFindAllItem() throws SQLException  {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            Item third = new Item("testNameThird", "testDescriptionThird");
+            tracker.add(second);
+            tracker.add(third);
+            result = tracker.findAll();
+            assertThat(result.get(0).getDescription(), is("teatDescriptionSecond"));
+        }
     }
 
     @Test
-    public void whenFindItemById() {
-        Item item = new Item("testNameSixth", "testDescriptionSixth");
-        trackerSQL.add(item);
-        assertThat(trackerSQL.findById(item.getId()).getDescription(), is("testDescriptionSixth"));
+    public void whenFindItemByName() throws SQLException  {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            Item third = new Item("testNameThird", "testDescriptionThird");
+            tracker.add(second);
+            tracker.add(third);
+            result = tracker.findByName("testNameThird");
+            assertThat(result.get(0).getDescription(), is("testDescriptionThird"));
+        }
+    }
+
+    @Test
+    public void whenFindItemById() throws SQLException {
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            Item third = new Item("testNameThird", "testDescriptionThird");
+            tracker.add(second);
+            tracker.add(third);
+            assertThat(tracker.findById(third.getId()).getDescription(), is("testDescriptionThird"));
+        }
     }
 }

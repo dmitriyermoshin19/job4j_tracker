@@ -1,6 +1,4 @@
-package ru.job4j.tracker.for_createProject;
-
-import java.util.Objects;
+package ru.job4j.tracker.forcreateproject;
 
 public class Item {
     private String id;
