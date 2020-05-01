@@ -3,6 +3,13 @@ language: java
 jdk:
   - openjdk13
 
+# настройка для генерации с базой tracker.
+services:
+  - postgresql
+
+before_install:
+  - psql -c 'create database tracker;' -U postgres
+
 # используем режим обычного пользователя для сборки проекта.
 sudo: false
 
@@ -19,6 +26,6 @@ notifications:
     on_success: never # default: change
     on_failure: always # default: always
 
-    env:
-      global:
-        - CODECOV_TOKEN="7869bbf8-b96d-4173-99d9-edc41556ee25"
+env:
+  global:
+    - CODECOV_TOKEN="7869bbf8-b96d-4173-99d9-edc41556ee25"
