@@ -1,5 +1,6 @@
 package ru.job4j.tracker;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.InputStream;
@@ -30,6 +31,7 @@ public class TrackerSQLTest {
         }
     }
 
+    @Ignore
     @Test
     public void createItem() throws SQLException {
         try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
@@ -67,7 +69,7 @@ public class TrackerSQLTest {
             assertThat(tracker.findByName(second.getId()).size(), is(0));
         }
     }
-
+    @Ignore
     @Test
     public void whenFindAllItem() throws SQLException  {
         try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(this.init()))) {
