@@ -3,9 +3,12 @@ package ru.job4j.tracker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+import java.util.function.Consumer;
 
 public class TrackerSQL implements ITracker, AutoCloseable {
 
@@ -87,6 +90,47 @@ public class TrackerSQL implements ITracker, AutoCloseable {
         return result;
     }
 
+    /**
+     * Метод реактивного программирования
+     */
+    public void findAll(Observe<Item> observe) throws InterruptedException {
+        LOG.debug("Find all reactive all");
+        List<Item> result = new ArrayList<>();
+        try (Statement st = connection.createStatement()) {
+            ResultSet rs = st.executeQuery("SELECT * FROM items;");
+            while (rs.next()) {
+                Item item = new Item(
+                        String.valueOf(rs.getInt("id")),
+                        rs.getString("name"),
+                        rs.getString("description"));
+                observe.receive(item);
+                result.add(item);
+            }
+            LOG.debug("Selecting complete. Found items: {}", result.size());
+        } catch (SQLException e) {
+            LOG.error("Something went wrong", e);
+        }
+        LOG.debug("Found {} items", result.size());
+    }
+
+    /**
+     * другой вариант метода реактивного программирования
+     */
+    public void findAlll(Consumer<Item> consumer) {
+        try (Statement st = connection.createStatement()) {
+            ResultSet rs = st.executeQuery("SELECT * FROM items;");
+            while (rs.next()) {
+                Item item = new Item(
+                        String.valueOf(rs.getInt("id")),
+                        rs.getString("name"),
+                        rs.getString("description"));
+                consumer.accept(item);
+            }
+        } catch (SQLException e) {
+            LOG.error("Something went wrong", e);
+        }
+    }
+
     @Override
     public List<Item> findByName(String name) {
         List<Item> result = new ArrayList<>();
@@ -115,5 +159,30 @@ public class TrackerSQL implements ITracker, AutoCloseable {
             LOG.error(e.getMessage(), e);
         }
         return item;
+    }
+
+    public static void main(String[] args) {
+        Connection con;
+        try (InputStream in = TrackerSQL.class.getClassLoader().getResourceAsStream("app.properties")) {
+            Properties config = new Properties();
+            config.load(in);
+            Class.forName(config.getProperty("driver-class-name"));
+             con = DriverManager.getConnection(
+                    config.getProperty("url"),
+                    config.getProperty("username"),
+                    config.getProperty("password")
+            );
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        try (TrackerSQL tracker = new TrackerSQL(ConnectionRollback.create(con))) {
+            Item second = new Item("testNameSecond", "teatDescriptionSecond");
+            Item third = new Item("testNameThird", "testDescriptionThird");
+            tracker.add(second);
+            tracker.add(third);
+            tracker.findAll(System.out::println);
+        } catch (SQLException | InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -14,6 +14,12 @@ public class Item {
         this.description = desc;
     }
 
+    public Item(String id, String name, String description) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -52,5 +58,13 @@ public class Item {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @Override
+    public String toString() {
+        return "{" + "id='" + id + '\''
+                + ", name='" + name + '\''
+                + ", description='" + description + '\''
+                + '}';
     }
 }
